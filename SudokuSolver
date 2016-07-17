@@ -1,0 +1,228 @@
+// The INPUT should be fixed with something cooler, not just hardcode test
+// Well, so far this solver works. Probably I could improve the performance
+// sudoku.cpp : Defines the entry point for the console application.
+//
+
+#include "stdafx.h"
+#include <map>
+#include <set>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <chrono>
+
+
+using namespace std;
+
+/*
+	012|086|000
+	540|000|123
+	007|123|890
+	===|===|===
+	001|541|981
+	000|312|562
+	000|900|000
+	===|===|===
+	000|010|321
+	987|200|809
+	000|431|900
+*/
+
+//vector<vector<pair<int,vector<int>>>>
+//				data matrix		 ,initial possible values
+
+int getSubgrid(int x, int y)
+{
+	/*
+	012
+	345
+	678
+	*/
+	if(x <= 2 && y <= 2)
+		return 0;
+	if(x <= 2 && y >= 3 && y <= 5)
+		return 1;
+	if(x <= 2 && y >= 6)
+		return 2;
+	if(x >= 3 && x <= 5 && y <= 2)
+		return 3;
+	if(x >= 3 && x <= 5 && y >= 3 && y <= 5)
+		return 4;
+	if(x >= 3 && x <= 5 && y >= 6)
+		return 5;
+	if(x >= 6 && y <= 2)
+		return 6;
+	if(x >= 6 && y >= 3 && y <= 5)
+		return 7;
+	if(x >= 6 && y >= 6)
+		return 8;
+}
+
+pair<int,int> getNextPos(int x, int y)
+{
+	y++;
+	if(y < 9)
+		return make_pair(x,y);
+	else{
+		y = 0;
+		x++;
+		if(x < 9)
+			return make_pair(x,y);
+		else{
+			return make_pair(-1,-1);
+		}
+	}
+}
+
+bool isValidValue(int value, int x, int y, vector<set<int>> &hor, vector<set<int>> &ver, vector<set<int>> &sub)
+{
+	if(hor[x].find(value) == hor[x].end()){
+		if(ver[y].find(value) == ver[y].end()){
+			auto v = getSubgrid(x,y);
+			if(sub[v].find(value) == sub[v].end()){
+				hor[x].insert(value);
+				ver[y].insert(value);
+				sub[v].insert(value);
+				return true;
+			}
+			else
+				return false;
+		}
+		else
+			return false;
+	}
+	else
+		return false;
+}
+void removeValue(int value, int x, int y, vector<set<int>> &hor, vector<set<int>> &ver, vector<set<int>> &sub)
+{
+	hor[x].erase(value);
+	ver[y].erase(value);
+	sub[getSubgrid(x,y)].erase(value);
+}
+
+bool sudokuFindNext(vector<vector<int>> &data, int x, int y, vector<set<int>> &hor, vector<set<int>> &ver, vector<set<int>> &sub)
+{
+	if(x == -1 && y == -1)
+		return true;
+	auto next = getNextPos(x,y);
+	if(data[x][y] == 0){
+		int val = 1;
+		while(val <= 9){
+			if(isValidValue(val, x, y, hor, ver, sub)){
+				bool res = sudokuFindNext(data, next.first, next.second, hor, ver, sub);
+				if(res){
+					data[x][y] = val;
+					return true;
+				}
+				else{
+					data[x][y] = 0;
+					removeValue(val, x, y, hor, ver, sub);
+				}
+			}
+			val++;
+		}
+		return false;
+	}
+	else
+		return sudokuFindNext(data, next.first, next.second, hor, ver, sub);
+}
+
+bool solveSudoku(vector<vector<int>> &data)
+{
+	vector<set<int>> horizontal;
+	vector<set<int>> vertical;
+	vector<set<int>> subgrid;
+	for(int i=0; i<9; i++){
+		horizontal.push_back(set<int>());
+		vertical.push_back(set<int>());
+		subgrid.push_back(set<int>());
+	}
+	for(int i=0; i<data.size(); i++){
+		for(int j=0; j<data.size(); j++){
+			if(data[i][j] != 0){
+				horizontal[i].insert(data[i][j]);
+				vertical[j].insert(data[i][j]);
+				subgrid[getSubgrid(i,j)].insert(data[i][j]);
+			}
+		}
+	}
+	
+	return sudokuFindNext(data,0,0,horizontal,vertical,subgrid);
+}
+
+void printResult(vector<vector<int>> &data)
+{
+	cout << "===========" << endl;
+	for(int i=0; i<9; i++){
+		if(i>0 && i % 3 == 0)
+			cout << "-----------" << endl;
+		for(int j=0; j<9; j++){
+			if(j>0 && j % 3 == 0)
+				cout << "|";
+			cout << data[i][j];
+		}
+		cout << endl;
+	}
+	cout << "===========" << endl;
+}
+
+int _tmain(int argc, _TCHAR* argv[])
+{
+	vector<vector<int>> data;
+	vector<int> row;
+	row.push_back(1);	row.push_back(0);	row.push_back(4);
+	row.push_back(0);	row.push_back(0);	row.push_back(0);
+	row.push_back(2);	row.push_back(0);	row.push_back(0);
+	data.push_back(row);
+	row.clear();
+	row.push_back(6);	row.push_back(0);	row.push_back(8);
+	row.push_back(7);	row.push_back(2);	row.push_back(0);
+	row.push_back(0);	row.push_back(0);	row.push_back(0);
+	data.push_back(row);
+	row.clear();
+	row.push_back(9);	row.push_back(0);	row.push_back(2);
+	row.push_back(0);	row.push_back(4);	row.push_back(0);
+	row.push_back(0);	row.push_back(0);	row.push_back(5);
+	data.push_back(row);
+	row.clear();
+	row.push_back(2);	row.push_back(4);	row.push_back(0);
+	row.push_back(0);	row.push_back(0);	row.push_back(8);
+	row.push_back(3);	row.push_back(0);	row.push_back(0);
+	data.push_back(row);
+	row.clear();
+	row.push_back(8);	row.push_back(9);	row.push_back(0);
+	row.push_back(0);	row.push_back(7);	row.push_back(0);
+	row.push_back(5);	row.push_back(0);	row.push_back(2);
+	data.push_back(row);
+	row.clear();
+	row.push_back(3);	row.push_back(0);	row.push_back(0);
+	row.push_back(2);	row.push_back(0);	row.push_back(0);
+	row.push_back(0);	row.push_back(0);	row.push_back(0);
+	data.push_back(row);
+	row.clear();
+	row.push_back(7);	row.push_back(2);	row.push_back(9);
+	row.push_back(0);	row.push_back(8);	row.push_back(0);
+	row.push_back(0);	row.push_back(5);	row.push_back(3);
+	data.push_back(row);
+	row.clear();
+	row.push_back(5);	row.push_back(0);	row.push_back(3);
+	row.push_back(0);	row.push_back(9);	row.push_back(2);
+	row.push_back(8);	row.push_back(4);	row.push_back(7);
+	data.push_back(row);
+	row.clear();
+	row.push_back(4);	row.push_back(8);	row.push_back(0);
+	row.push_back(5);	row.push_back(3);	row.push_back(7);
+	row.push_back(9);	row.push_back(2);	row.push_back(0);
+	data.push_back(row);
+
+	chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
+	bool res = solveSudoku(data);
+	chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
+	auto duration = chrono::duration_cast<chrono::milliseconds>(t2 - t1).count();
+	cout << "Total time: " << duration << "ms" << endl;
+	printResult(data);
+
+	return 0;
+}
+
